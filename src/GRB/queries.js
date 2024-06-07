@@ -22,14 +22,20 @@ const updateQuantity =
 const reduceStock =
     'UPDATE "Supplier" SET "Stock" = "Stock" - $1 WHERE "BookID" = $2 AND "SupplierID" = $3';
 
+const checkMembershipexist =
+    'SELECT m FROM "Membership" m WHERE m."CustomerID" = $1';
+
 const getMembershipByCustId =
-    'SELECT "MembershipID" FROM public."Membership" WHERE "CustomerID" = $1';
+    'SELECT * FROM "Membership" WHERE "CustomerID" = $1';
 
 const addMembership =
-    'INSERT INTO "Membership" ("MembershipDuration(months)", "CustomerID") VALUES ($1, $2) RETURNING "MembershipID"';
+    'INSERT INTO "Membership" ("MembershipID", "MembershipDuration", "CustomerID") VALUES ($1, $2, $3)';
 
 const removeMembership =
-    'DELETE FROM "Membership" WHERE "MembershipID" = $1';
+    'DELETE FROM "Membership" WHERE "CustomerID" = $1';
+
+const addCustomer =
+    'INSERT INTO "Customer" ("CustomerID", "CustomerName", "Street", "City", "State", "Country") VALUES ($1, $2, $3, $4, $5, $6)';
 
 module.exports = {
     getBooks,
@@ -40,7 +46,9 @@ module.exports = {
     updateBook,
     updateQuantity,
     reduceStock,
+    checkMembershipexist,
     getMembershipByCustId,
     addMembership,
     removeMembership,
+    addCustomer
 }

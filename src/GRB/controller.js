@@ -18,6 +18,14 @@ const getBookById = (req, res) => {
     })
 }
 
+const getMembershipByCustId = (req, res) => {
+  const id = parseInt(req.params.id);
+  pool.query(queries.getMembershipByCustId, [id], (error, results) => {
+      if(error) throw error;
+      res.status(200).json(results.rows);
+  })
+}
+
 // add  new book
 const addBook = (req, res) => {
     const {BookID, BookTitle, PublicationYear, Pages, PublisherID, LanguageID} = req.body;
@@ -66,69 +74,73 @@ const updateBook = (req, res) => {
 
 // Add Membership
 const addMembership = (req, res) => {
-  const customerId = parseInt(req.params.customerId);
-  const membershipDuration = parseInt(req.body.membershipDuration);
+  const {MembershipID, MembershipDuration, CustomerID, CustomerName, Street, City, State, Country} =req.body;
+  if (
+    !MembershipID ||
+    !MembershipDuration ||
+    !CustomerID || 
+    !CustomerName ||
+    !Street ||
+    !City ||
+    !State ||
+    !Country
+  ){
+    return res.status(200).send("missing required fields");
+  }
+  pool.connect((err, client, done) => {
+    if (err) {
+      console.error("Database connection error:", err);
+      return res.status(200).send("Database connection error.");
+    }
 
-  // Check if customer already has a membership
-  pool.query(queries.getMembershipByCustId,
-    [customerId],
-    (error, results) => {
-      if (error) {
-        throw error;
+    //check if membership exist
+    client.query(queries.checkMembershipexist, [CustomerID],(error, results) => {
+      if (err) {
+        done();
+        console.error("Error checking book name existence:", err);
+        return res.status(200).send("An error occurred.");
       }
-
       if (results.rows.length) {
-        return res.status(400).send("Customer already has a membership.");
-      } else {
-        // Create a new membership for the customer
-        pool.query(queries.addMembership,
-          [membershipDuration, customerId],
-          (error, results) => {
-            if (error) {
-              throw error;
-            }
-            // Extract the MembershipID of the newly created membership
-            const membershipID = results.rows[0].MembershipID;
-            res.status(201).send(`Membership added successfully with ID: ${membershipID}`);
-          }
-        );
+        done();
+        return res.status(400).send("Membership already exists.");
       }
+    // add new customer and membership
+      client.query(queries.addCustomer, [CustomerID, CustomerName, Street, City, State, Country],
+        (err, results) => {
+          done(); // Release the client back to the pool
+          if (err) {
+            console.error("Error adding stock:", err);
+            return res.status(500).send("An error occurred.");
+          }
+          //create new membership for the customer
+          client.query(queries.addMembership,
+            [MembershipID, MembershipDuration, CustomerID],
+            (error, results) => {
+              if (err) {
+                done();
+                console.error("Error adding book:", err);
+                return res.status(500).send("An error occurred.");
+              }})  
+            res.status(201).send(`Membership added successfully with ID: ${MembershipID}`);
+          });
+        });
+      });
     }
-  );
-};
 
-// Remove Membership
+// delete membership
 const removeMembership = (req, res) => {
-  const customerId = parseInt(req.params.customerId);
-
-  // Check if the customer's membership exists
-  pool.query(queries.getMembershipByCustId,
-    [customerId],
-    (error, results) => {
-      if (error) {
-        throw error;
+  const id = parseInt(req.params.id);
+  pool.query(queries.getMembershipByCustId, [id], (error, results)=>{
+      const noMembershipFound = !results.rows.length;
+      if(noMembershipFound){
+          res.status(201).send("Membership does not exist for this customer.");
       }
-
-      if (!results.rows.length) {
-        return res.status(404).send("Membership does not exist for this customer.");
-      }
-
-      // Extract the MembershipID of the existing membership
-      const membershipID = results.rows[0].MembershipID;
-
-      // Remove membership
-      pool.query(queries.removeMembership,
-        [membershipID],
-        (error, results) => {
-          if (error) {
-            throw error;
-          }
+      pool.query(queries.removeMembership, [id], (error, results) =>{
+          if(error) throw error;
           res.status(200).send("Membership removed successfully.");
-        }
-      );
-    }
-  );
-};
+  })
+  })
+}
 
 // build query
 const buildQuery = (req, res) => {
@@ -248,5 +260,6 @@ module.exports =  {
     addMembership,
     removeMembership,
     buildQuery,
+    getMembershipByCustId,
     InventoryUpdate,
 }

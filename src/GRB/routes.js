@@ -9,9 +9,7 @@ router.delete('/remove/book/:id', controller.removeBook);
 router.put('/update/book/:id', controller.updateBook);
 router.post('/book/query', controller.buildQuery);
 router.post('/update/inventory', controller.InventoryUpdate);
-
-// Add and remove membership routes
-router.post('/add/membership/:customerId', controller.addMembership);
-router.delete('/remove/membership/:customerId', controller.removeMembership);
+router.post('/add/membership', controller.addMembership);
+router.delete('/remove/membership/:id', controller.removeMembership);
 
 module.exports = router;
